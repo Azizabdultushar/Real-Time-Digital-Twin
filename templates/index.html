@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>MPU6050 Digital Twin</title>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+
+            margin: 0;
+
+            overflow: hidden;
+
+            background:
+                radial-gradient(
+                    circle at center,
+                    #101b35 0%,
+                    #050816 60%,
+                    #02030a 100%
+                );
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            color: white;
+        }
+
+
+        #dashboard {
+
+            position: fixed;
+
+            top: 20px;
+
+            left: 20px;
+
+            z-index: 100;
+
+            width: 280px;
+
+            padding: 20px;
+
+            border-radius: 15px;
+
+            background:
+                rgba(0, 0, 0, 0.70);
+
+            backdrop-filter:
+                blur(10px);
+
+            border:
+                1px solid
+                rgba(255,255,255,0.15);
+
+            box-shadow:
+                0 10px 40px
+                rgba(0,0,0,0.5);
+        }
+
+
+        #dashboard h1 {
+
+            margin: 0 0 5px 0;
+
+            font-size: 22px;
+        }
+
+
+        #dashboard p {
+
+            margin-top: 0;
+
+            color: #aaa;
+
+            font-size: 13px;
+        }
+
+
+        .status {
+
+            margin: 15px 0;
+
+            padding: 10px;
+
+            border-radius: 8px;
+
+            background:
+                rgba(0,255,120,0.1);
+        }
+
+
+        #status {
+
+            color: #00ff88;
+
+            font-weight: bold;
+        }
+
+
+        .sensor {
+
+            display: flex;
+
+            justify-content:
+                space-between;
+
+            padding: 6px 0;
+
+            border-bottom:
+                1px solid
+                rgba(255,255,255,0.08);
+        }
+
+
+        .label {
+
+            color: #aaa;
+        }
+
+
+        .value {
+
+            font-family: monospace;
+
+            font-weight: bold;
+        }
+
+
+        #instructions {
+
+            position: fixed;
+
+            bottom: 20px;
+
+            left: 50%;
+
+            transform:
+                translateX(-50%);
+
+            z-index: 100;
+
+            padding: 10px 18px;
+
+            background:
+                rgba(0,0,0,0.6);
+
+            border-radius: 20px;
+
+            color: #aaa;
+
+            font-size: 13px;
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<div id="dashboard">
+
+    <h1>🚀 MPU6050 Digital Twin</h1>
+
+    <p>
+        Raspberry Pi Zero 2 W
+    </p>
+
+
+    <div class="status">
+
+        Status:
+        <span id="status">
+            Connecting...
+        </span>
+
+    </div>
+
+
+    <div class="sensor">
+
+        <span class="label">
+            Roll
+        </span>
+
+        <span class="value">
+
+            <span id="roll">
+                0.00
+            </span>°
+
+        </span>
+
+    </div>
+
+
+    <div class="sensor">
+
+        <span class="label">
+            Pitch
+        </span>
+
+        <span class="value">
+
+            <span id="pitch">
+                0.00
+            </span>°
+
+        </span>
+
+    </div>
+
+
+    <div class="sensor">
+
+        <span class="label">
+            Gyro X
+        </span>
+
+        <span class="value">
+
+            <span id="gx">
+                0.00
+            </span>
+
+            °/s
+
+        </span>
+
+    </div>
+
+
+    <div class="sensor">
+
+        <span class="label">
+            Gyro Y
+        </span>
+
+        <span class="value">
+
+            <span id="gy">
+                0.00
+            </span>
+
+            °/s
+
+        </span>
+
+    </div>
+
+
+    <div class="sensor">
+
+        <span class="label">
+            Gyro Z
+        </span>
+
+        <span class="value">
+
+            <span id="gz">
+                0.00
+            </span>
+
+            °/s
+
+        </span>
+
+    </div>
+
+
+    <div class="sensor">
+
+        <span class="label">
+            Temperature
+        </span>
+
+        <span class="value">
+
+            <span id="temperature">
+                0.00
+            </span>
+
+            °C
+
+        </span>
+
+    </div>
+
+</div>
+
+
+<div id="instructions">
+
+    Move the MPU6050 to control the digital rocket
+
+</div>
+
+
+<script>
+
+
+// ============================================================
+// THREE.JS SCENE
+// ============================================================
+
+const scene =
+    new THREE.Scene();
+
+
+scene.background =
+    new THREE.Color(
+        0x050816
+    );
+
+
+// ============================================================
+// CAMERA
+// ============================================================
+
+const camera =
+    new THREE.PerspectiveCamera(
+        60,
+        window.innerWidth /
+        window.innerHeight,
+        0.1,
+        1000
+    );
+
+
+camera.position.set(
+    0,
+    1,
+    10
+);
+
+
+// ============================================================
+// RENDERER
+// ============================================================
+
+const renderer =
+    new THREE.WebGLRenderer({
+        antialias: true
+    });
+
+
+renderer.setPixelRatio(
+    window.devicePixelRatio
+);
+
+
+renderer.setSize(
+    window.innerWidth,
+    window.innerHeight
+);
+
+
+document.body.appendChild(
+    renderer.domElement
+);
+
+
+// ============================================================
+// LIGHTING
+// ============================================================
+
+scene.add(
+    new THREE.AmbientLight(
+        0xffffff,
+        1.5
+    )
+);
+
+
+const directionalLight =
+    new THREE.DirectionalLight(
+        0xffffff,
+        3
+    );
+
+
+directionalLight.position.set(
+    5,
+    8,
+    5
+);
+
+
+scene.add(
+    directionalLight
+);
+
+
+// ============================================================
+// ROCKET
+// ============================================================
+
+const rocket =
+    new THREE.Group();
+
+
+scene.add(
+    rocket
+);
+
+
+// ============================================================
+// ROCKET BODY
+// ============================================================
+
+const bodyGeometry =
+    new THREE.CylinderGeometry(
+        0.8,
+        0.8,
+        3.5,
+        32
+    );
+
+
+const bodyMaterial =
+    new THREE.MeshStandardMaterial({
+        color: 0xd8d8d8,
+        metalness: 0.5,
+        roughness: 0.3
+    });
+
+
+const body =
+    new THREE.Mesh(
+        bodyGeometry,
+        bodyMaterial
+    );
+
+
+rocket.add(
+    body
+);
+
+
+// ============================================================
+// NOSE
+// ============================================================
+
+const noseGeometry =
+    new THREE.ConeGeometry(
+        0.8,
+        1.8,
+        32
+    );
+
+
+const noseMaterial =
+    new THREE.MeshStandardMaterial({
+        color: 0xff3030,
+        metalness: 0.3,
+        roughness: 0.3
+    });
+
+
+const nose =
+    new THREE.Mesh(
+        noseGeometry,
+        noseMaterial
+    );
+
+
+nose.position.y =
+    2.65;
+
+
+rocket.add(
+    nose
+);
+
+
+// ============================================================
+// WINDOW
+// ============================================================
+
+const windowGeometry =
+    new THREE.SphereGeometry(
+        0.35,
+        32,
+        32
+    );
+
+
+const windowMaterial =
+    new THREE.MeshStandardMaterial({
+        color: 0x00aaff,
+        metalness: 0.8,
+        roughness: 0.1
+    });
+
+
+const windowMesh =
+    new THREE.Mesh(
+        windowGeometry,
+        windowMaterial
+    );
+
+
+windowMesh.position.set(
+    0,
+    1,
+    0.75
+);
+
+
+windowMesh.scale.set(
+    1,
+    1,
+    0.3
+);
+
+
+rocket.add(
+    windowMesh
+);
+
+
+// ============================================================
+// FINS
+// ============================================================
+
+const finGeometry =
+    new THREE.BoxGeometry(
+        0.15,
+        1.4,
+        1
+    );
+
+
+const finMaterial =
+    new THREE.MeshStandardMaterial({
+        color: 0xff3030
+    });
+
+
+const leftFin =
+    new THREE.Mesh(
+        finGeometry,
+        finMaterial
+    );
+
+
+leftFin.position.set(
+    -0.75,
+    -1.1,
+    0
+);
+
+
+leftFin.rotation.z =
+    THREE.MathUtils.degToRad(
+        -20
+    );
+
+
+rocket.add(
+    leftFin
+);
+
+
+const rightFin =
+    new THREE.Mesh(
+        finGeometry,
+        finMaterial
+    );
+
+
+rightFin.position.set(
+    0.75,
+    -1.1,
+    0
+);
+
+
+rightFin.rotation.z =
+    THREE.MathUtils.degToRad(
+        20
+    );
+
+
+rocket.add(
+    rightFin
+);
+
+
+// ============================================================
+// ENGINE
+// ============================================================
+
+const engineGeometry =
+    new THREE.CylinderGeometry(
+        0.45,
+        0.3,
+        0.5,
+        32
+    );
+
+
+const engineMaterial =
+    new THREE.MeshStandardMaterial({
+        color: 0x333333,
+        metalness: 0.8
+    });
+
+
+const engine =
+    new THREE.Mesh(
+        engineGeometry,
+        engineMaterial
+    );
+
+
+engine.position.y =
+    -2;
+
+
+rocket.add(
+    engine
+);
+
+
+// ============================================================
+// FLAME
+// ============================================================
+
+const flameGeometry =
+    new THREE.ConeGeometry(
+        0.35,
+        1.5,
+        32
+    );
+
+
+const flameMaterial =
+    new THREE.MeshBasicMaterial({
+        color: 0xff6600
+    });
+
+
+const flame =
+    new THREE.Mesh(
+        flameGeometry,
+        flameMaterial
+    );
+
+
+flame.position.y =
+    -3;
+
+
+rocket.add(
+    flame
+);
+
+
+// ============================================================
+// STAR FIELD
+// ============================================================
+
+const starGeometry =
+    new THREE.BufferGeometry();
+
+
+const starPositions = [];
+
+
+for (
+    let i = 0;
+    i < 1000;
+    i++
+) {
+
+    starPositions.push(
+
+        (Math.random() - 0.5) * 100,
+
+        (Math.random() - 0.5) * 100,
+
+        (Math.random() - 0.5) * 100
+
+    );
+
+}
+
+
+starGeometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(
+        starPositions,
+        3
+    )
+);
+
+
+const starMaterial =
+    new THREE.PointsMaterial({
+        color: 0xffffff,
+        size: 0.08
+    });
+
+
+const stars =
+    new THREE.Points(
+        starGeometry,
+        starMaterial
+    );
+
+
+scene.add(
+    stars
+);
+
+
+// ============================================================
+// SENSOR DATA
+// ============================================================
+
+async function updateSensor() {
+
+    try {
+
+        const response =
+            await fetch(
+                "/imu?t=" +
+                Date.now()
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                "HTTP " +
+                response.status
+            );
+
+        }
+
+
+        const data =
+            await response.json();
+
+
+        // ----------------------------
+        // Orientation
+        // ----------------------------
+
+        const pitch =
+            THREE.MathUtils.degToRad(
+                data.pitch
+            );
+
+
+        const roll =
+            THREE.MathUtils.degToRad(
+                data.roll
+            );
+
+
+        rocket.rotation.x =
+            pitch;
+
+
+        rocket.rotation.z =
+            roll;
+
+
+        // ----------------------------
+        // Dashboard
+        // ----------------------------
+
+        document.getElementById(
+            "roll"
+        ).textContent =
+            data.roll.toFixed(2);
+
+
+        document.getElementById(
+            "pitch"
+        ).textContent =
+            data.pitch.toFixed(2);
+
+
+        document.getElementById(
+            "gx"
+        ).textContent =
+            data.gyro_x.toFixed(2);
+
+
+        document.getElementById(
+            "gy"
+        ).textContent =
+            data.gyro_y.toFixed(2);
+
+
+        document.getElementById(
+            "gz"
+        ).textContent =
+            data.gyro_z.toFixed(2);
+
+
+        document.getElementById(
+            "temperature"
+        ).textContent =
+            data.temperature.toFixed(2);
+
+
+        document.getElementById(
+            "status"
+        ).textContent =
+            "LIVE";
+
+    }
+
+
+    catch (error) {
+
+        console.error(
+            "Sensor error:",
+            error
+        );
+
+
+        document.getElementById(
+            "status"
+        ).textContent =
+            "ERROR";
+
+    }
+
+}
+
+
+// ============================================================
+// SENSOR UPDATE RATE
+// ============================================================
+
+setInterval(
+    updateSensor,
+    50
+);
+
+
+updateSensor();
+
+
+// ============================================================
+// RENDER LOOP
+// ============================================================
+
+function animate() {
+
+    requestAnimationFrame(
+        animate
+    );
+
+
+    renderer.render(
+        scene,
+        camera
+    );
+
+}
+
+
+animate();
+
+
+// ============================================================
+// WINDOW RESIZE
+// ============================================================
+
+window.addEventListener(
+    "resize",
+    () => {
+
+        camera.aspect =
+            window.innerWidth /
+            window.innerHeight;
+
+
+        camera.updateProjectionMatrix();
+
+
+        renderer.setSize(
+            window.innerWidth,
+            window.innerHeight
+        );
+
+    }
+);
+
+</script>
+
+</body>
+
+</html>

@@ -11,7 +11,7 @@ When the physical sensor is tilted, the virtual rocket responds in real time.
 
 ![MPU6050 Digital Twin Demo](Image/3.jpg)
 
-<img src="Image/2.gif" alt="MPU6050 Digital Twin Demo" width="700">
+
 
 ## ✨ Features
 
@@ -30,7 +30,7 @@ When the physical sensor is tilted, the virtual rocket responds in real time.
 
 ---
 
-![MPU6050 Digital Twin Demo](Image/2.gif)
+<img src="Image/2.gif" alt="MPU6050 Digital Twin Demo" width="700">
 
 
 

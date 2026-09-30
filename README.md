@@ -26,6 +26,12 @@ When the physical sensor is tilted, the virtual rocket responds in real time.
 
 ---
 
+Image/2.gif
+
+
+
+
+
 ## 🏗️ System Architecture
 
 ```text
@@ -341,7 +347,7 @@ mpu6050-digital-twin/
 └── docs/
     └── wiring.md
 ```
-
+Image/1.png
 ---
 
 ## 🎓 Project Goals
